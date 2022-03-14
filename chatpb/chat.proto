@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package chat;
+option go_package = "/chatpb";
+
+import "google/api/annotations.proto";
+
+message Authorization {
+    string jwt = 1;
+}
+
+message RequestSignUp {
+    string id = 1;
+    string pw = 2;
+    string name = 3;
+    string email = 4;
+}
+message ResponseSignUp {
+    bool success = 1;
+}
+
+message RequestSignIn {
+    string id = 1;
+    string pw = 2;
+}
+message ResponseSignIn {
+    // Invalid ID or PW if jwt is empty
+    Authorization auth = 1;
+}
+
+message RequestMessage {
+    Authorization auth = 1;
+    string id = 2;
+    string message = 3;
+}
+message ResponseMessage {
+    string id = 1;
+    string message = 2;
+}
+
+
+service ChatService {
+    rpc SignUp(RequestSignUp) returns (ResponseSignUp) {
+        option (google.api.http) = {
+            post: "/signup"
+            body: "*"
+        };
+    }
+    rpc SignIn(RequestSignIn) returns (ResponseSignIn) {
+        option (google.api.http) = {
+            post: "/signin"
+            body: "*"
+        };
+    }
+    rpc Chat(stream RequestMessage) returns (stream ResponseMessage) {
+        option (google.api.http) = {
+            post: "/chat"
+            body: "*"
+        };
+    }
+}
