@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.19.4
-// source: chatpb/chat.proto
+// source: proto/chat_service.proto
 
-package chatpb
+package pb
 
 import (
 	context "context"
@@ -22,8 +22,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
-	SignUp(ctx context.Context, in *RequestSignUp, opts ...grpc.CallOption) (*ResponseSignUp, error)
-	SignIn(ctx context.Context, in *RequestSignIn, opts ...grpc.CallOption) (*ResponseSignIn, error)
 	Chat(ctx context.Context, opts ...grpc.CallOption) (ChatService_ChatClient, error)
 }
 
@@ -35,26 +33,8 @@ func NewChatServiceClient(cc grpc.ClientConnInterface) ChatServiceClient {
 	return &chatServiceClient{cc}
 }
 
-func (c *chatServiceClient) SignUp(ctx context.Context, in *RequestSignUp, opts ...grpc.CallOption) (*ResponseSignUp, error) {
-	out := new(ResponseSignUp)
-	err := c.cc.Invoke(ctx, "/chat.ChatService/SignUp", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *chatServiceClient) SignIn(ctx context.Context, in *RequestSignIn, opts ...grpc.CallOption) (*ResponseSignIn, error) {
-	out := new(ResponseSignIn)
-	err := c.cc.Invoke(ctx, "/chat.ChatService/SignIn", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *chatServiceClient) Chat(ctx context.Context, opts ...grpc.CallOption) (ChatService_ChatClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[0], "/chat.ChatService/Chat", opts...)
+	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[0], "/sehyoung.pb.ChatService/Chat", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +68,6 @@ func (x *chatServiceChatClient) Recv() (*ResponseMessage, error) {
 // All implementations should embed UnimplementedChatServiceServer
 // for forward compatibility
 type ChatServiceServer interface {
-	SignUp(context.Context, *RequestSignUp) (*ResponseSignUp, error)
-	SignIn(context.Context, *RequestSignIn) (*ResponseSignIn, error)
 	Chat(ChatService_ChatServer) error
 }
 
@@ -97,12 +75,6 @@ type ChatServiceServer interface {
 type UnimplementedChatServiceServer struct {
 }
 
-func (UnimplementedChatServiceServer) SignUp(context.Context, *RequestSignUp) (*ResponseSignUp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignUp not implemented")
-}
-func (UnimplementedChatServiceServer) SignIn(context.Context, *RequestSignIn) (*ResponseSignIn, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SignIn not implemented")
-}
 func (UnimplementedChatServiceServer) Chat(ChatService_ChatServer) error {
 	return status.Errorf(codes.Unimplemented, "method Chat not implemented")
 }
@@ -116,42 +88,6 @@ type UnsafeChatServiceServer interface {
 
 func RegisterChatServiceServer(s grpc.ServiceRegistrar, srv ChatServiceServer) {
 	s.RegisterService(&ChatService_ServiceDesc, srv)
-}
-
-func _ChatService_SignUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestSignUp)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatServiceServer).SignUp(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/chat.ChatService/SignUp",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).SignUp(ctx, req.(*RequestSignUp))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ChatService_SignIn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RequestSignIn)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChatServiceServer).SignIn(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/chat.ChatService/SignIn",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).SignIn(ctx, req.(*RequestSignIn))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _ChatService_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -184,18 +120,9 @@ func (x *chatServiceChatServer) Recv() (*RequestMessage, error) {
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ChatService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "chat.ChatService",
+	ServiceName: "sehyoung.pb.ChatService",
 	HandlerType: (*ChatServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "SignUp",
-			Handler:    _ChatService_SignUp_Handler,
-		},
-		{
-			MethodName: "SignIn",
-			Handler:    _ChatService_SignIn_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Chat",
@@ -204,5 +131,5 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "chatpb/chat.proto",
+	Metadata: "proto/chat_service.proto",
 }

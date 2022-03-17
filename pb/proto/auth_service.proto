@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package sehyoung.pb;
+option go_package = ".;pb";
+
+import "google/api/annotations.proto";
+import "proto/message.proto";
+
+message RequestSignUp {
+    string id = 1;
+    string pw = 2;
+    string name = 3;
+    string email = 4;
+}
+message ResponseSignUp {
+    bool success = 1;
+}
+
+message RequestSignIn {
+    string id = 1;
+    string pw = 2;
+}
+message ResponseSignIn {
+    // Invalid ID or PW if jwt is empty
+    Authorization auth = 1;
+}
+
+service AuthService {
+    rpc SignUp(RequestSignUp) returns (ResponseSignUp) {
+        option (google.api.http) = {
+            post: "/signup"
+            body: "*"
+        };
+    }
+    rpc SignIn(RequestSignIn) returns (ResponseSignIn) {
+        option (google.api.http) = {
+            post: "/signin"
+            body: "*"
+        };
+    } 
+}

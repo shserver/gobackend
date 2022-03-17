@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package sehyoung.pb;
+option go_package = ".;pb";
+import "google/api/annotations.proto";
+
+// test service
+message TestMessage {
+    string msg = 1;
+}
+
+service TestService {
+    rpc Hello(TestMessage) returns (TestMessage) {
+        option (google.api.http) = {
+            get: "/hello"
+        };
+    }
+}

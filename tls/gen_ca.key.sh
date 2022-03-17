@@ -1,4 +1,4 @@
-SERVER_CN=localhost
+SERVER_CN="sehyoung"
 
 # commond name : certificate's unique name (usually use domain name)
 

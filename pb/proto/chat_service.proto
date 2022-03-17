@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package sehyoung.pb;
+option go_package = ".;pb";
+
+import "google/api/annotations.proto";
+import "proto/message.proto";
+
+message RequestMessage {
+    Authorization auth = 1;
+    string id = 2;
+    string message = 3;
+}
+message ResponseMessage {
+    string id = 1;
+    string message = 2;
+}
+
+service ChatService {
+    rpc Chat(stream RequestMessage) returns (stream ResponseMessage) {
+        option (google.api.http) = {
+            post: "/chat"
+            body: "*"
+        };
+    }
+}
