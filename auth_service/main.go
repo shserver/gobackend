@@ -6,14 +6,19 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	pb "sehyoung/pb/gen"
 	"sehyoung/server/middleware"
+	"strings"
 
 	"github.com/go-playground/validator"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gomodule/redigo/redis"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -26,12 +31,12 @@ type Account struct {
 }
 
 type server struct {
-	userDB *sql.DB
+	userDB   *sql.DB    //id pw name email
+	redisCon redis.Conn //id refreshToken
 }
 
-const (
+var (
 	sqlDriver     = "mysql"
-	dbServer      = "root:ksh0917@tcp(127.0.0.1:3306)/chat-service"
 	serverAddress = "0.0.0.0:50000"
 )
 
@@ -106,25 +111,94 @@ func (s *server) SignIn(ctx context.Context, req *pb.RequestSignIn) (*pb.Respons
 			log.Printf("wrong password")
 			return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Incorrect user or password"))
 		}
-		signedJWT, err := middleware.CreateJWT(id)
+		signedJWT, err := middleware.CreateJWT(id, middleware.TokenDuration("access"))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
 		}
-		fmt.Printf("signed_jwt %s", signedJWT)
-		return &pb.ResponseSignIn{Auth: &pb.Authorization{Jwt: signedJWT}}, nil
+		refreshSignedJWT, err := middleware.CreateJWT(id, middleware.TokenDuration("refresh"))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+		}
+
+		_, err = s.redisCon.Do("SET", id, refreshSignedJWT)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+		}
+
+		return &pb.ResponseSignIn{Token: signedJWT, RefreshToken: refreshSignedJWT}, nil
 	} else {
 		log.Printf("Internal error")
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal query error"))
 	}
 }
 
-func main() {
-	// auth DB server
-	db, err := sql.Open(sqlDriver, dbServer)
+func (s *server) RefreshToken(ctx context.Context, req *pb.RequestRefreshToken) (*pb.ResponseRefreshToken, error) {
+	log.Print("RefreshToken Request from client")
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "No metadata")
+	}
+	values := md["authorization"]
+	if len(values) == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "No authorization token")
+	}
+
+	claims, err := middleware.VerifyJWT(values[0])
 	if err != nil {
-		panic(err)
+		log.Printf("Auth Fail : %v", err)
+		return nil, status.Errorf(codes.Unauthenticated, "Invalid authorization token")
+	}
+
+	aud := claims.Audience[0]
+	r, err := redis.String(s.redisCon.Do("GET", aud))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "err: ", err)
+	}
+
+	if strings.Contains(values[0], r) == false {
+		return nil, status.Errorf(codes.Unauthenticated, "Non matching token")
+	}
+
+	signedJWT, err := middleware.CreateJWT(aud, middleware.TokenDuration("access"))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+	}
+
+	refreshSignedJWT := ""
+	if middleware.RefreshTokenReissue(claims.ExpiresAt.Time) {
+		refreshSignedJWT, err = middleware.CreateJWT(aud, middleware.TokenDuration("refresh"))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+		}
+		_, err = s.redisCon.Do("SET", aud, refreshSignedJWT)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+		}
+	}
+
+	return &pb.ResponseRefreshToken{Token: signedJWT, RefreshToken: refreshSignedJWT}, nil
+}
+
+func main() {
+	err := godotenv.Load("../.env")
+	if err != nil {
+		log.Fatal("Load env error: ", err)
+	}
+
+	// user DB server
+	db, err := sql.Open(sqlDriver, os.Getenv("USER_DB_SERVER"))
+	if err != nil {
+		log.Fatal("can't connect to user server: ", err)
 	}
 	defer db.Close()
+
+	// token DB server
+	c, err := redis.Dial("tcp", ":6379")
+	if err != nil {
+		log.Fatal("can't connect to token server: ", err)
+	}
+	defer c.Close()
+
 	// grpc server
 	lis, err := net.Listen("tcp", serverAddress)
 	if err != nil {
@@ -134,8 +208,10 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterAuthServiceServer(s, &server{
-		userDB: db,
+		userDB:   db,
+		redisCon: c,
 	})
+	log.Printf("auth service start...")
 	err = s.Serve(lis)
 	if err != nil {
 		log.Printf("grpc server error")

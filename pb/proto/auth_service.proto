@@ -4,7 +4,6 @@ package sehyoung.pb;
 option go_package = ".;pb";
 
 import "google/api/annotations.proto";
-import "proto/message.proto";
 
 message RequestSignUp {
     string id = 1;
@@ -22,20 +21,34 @@ message RequestSignIn {
 }
 message ResponseSignIn {
     // Invalid ID or PW if jwt is empty
-    Authorization auth = 1;
+    string token = 1;
+    string refresh_token = 2;
+}
+
+message RequestRefreshToken {
+}
+message ResponseRefreshToken {
+    string token = 1;
+    string refresh_token = 2;
 }
 
 service AuthService {
     rpc SignUp(RequestSignUp) returns (ResponseSignUp) {
         option (google.api.http) = {
-            post: "/signup"
+            post: "/auth/signup"
             body: "*"
         };
     }
     rpc SignIn(RequestSignIn) returns (ResponseSignIn) {
         option (google.api.http) = {
-            post: "/signin"
+            post: "/auth/signin"
             body: "*"
         };
-    } 
+    }
+    rpc RefreshToken(RequestRefreshToken) returns (ResponseRefreshToken) {
+        option (google.api.http) = {
+            post: "/auth/refreshtoken"
+            body: "*"
+        };
+    }
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	pb "sehyoung/pb/gen"
+	"sehyoung/server/middleware"
 
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc"
@@ -32,10 +33,9 @@ func (s *server) Chat(stream pb.ChatService_ChatServer) error {
 			log.Printf("[Chat] err : %v", err)
 			return status.Errorf(codes.Canceled, fmt.Sprintf("receive error from client %v", err))
 		}
-		id := req.GetId()
 		message := "Thank you" + req.GetMessage()
 
-		err = stream.Send(&pb.ResponseMessage{Id: id, Message: message})
+		err = stream.Send(&pb.ResponseMessage{Message: message})
 		if err != nil {
 			return status.Errorf(codes.Canceled, fmt.Sprintf("send error to client %v", err))
 		}
@@ -48,9 +48,13 @@ func main() {
 		log.Println("Listen error")
 		panic(err)
 	}
+	opts := []grpc.ServerOption{
+		grpc.UnaryInterceptor(middleware.UnaryServer()),
+	}
+	s := grpc.NewServer(opts...)
 
-	s := grpc.NewServer()
 	pb.RegisterChatServiceServer(s, &server{})
+	log.Printf("chat service start...")
 	err = s.Serve(lis)
 	if err != nil {
 		log.Printf("grpc server error")

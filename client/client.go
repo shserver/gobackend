@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"sehyoung-world/chatpb"
+	pb "sehyoung/pb/gen"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -15,21 +15,21 @@ const (
 	grpcTlsPort = "50001"
 )
 
-func hello(clnt chatpb.TestServiceClient) {
-	_, err := clnt.Hello(context.Background(), &chatpb.TestMessage{Msg: "test hello"})
+func hello(clnt pb.TestServiceClient) {
+	_, err := clnt.Hello(context.Background(), &pb.TestMessage{Jwt: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzZWh5b3VuZyIsImF1ZCI6WyJraW1zaCJdLCJleHAiOjE2NDcyNjM2Mzl9.qYZW_4kbklQD1DZOQHJi9d38acfEcj5phnLV34VxObo", Msg: "test hello"})
 	if err != nil {
 		log.Fatalf("sign in request failed to server ... %v", err)
 	}
 }
 
-// func signUp(clnt chatpb.ChatServiceClient) {
+// func signUp(clnt pb.ChatServiceClient) {
 // 	fmt.Println("singUp mode ...")
 // 	id, pw, name, email := "", "", "", ""
 
 // 	fmt.Print("id pw name email 입력")
 // 	fmt.Scanf("%s %s %s %s", &id, &pw, &name, &email)
 
-// 	res, err := clnt.SignUp(context.Background(), &chatpb.RequestSignUp{Id: id, Pw: pw, Name: name, Email: email})
+// 	res, err := clnt.SignUp(context.Background(), &pb.RequestSignUp{Id: id, Pw: pw, Name: name, Email: email})
 // 	if err != nil {
 // 		log.Fatalf("sign in request failed to server ... %v", err)
 // 	}
@@ -40,7 +40,7 @@ func hello(clnt chatpb.TestServiceClient) {
 // 	}
 // }
 
-// func signIn(clnt chatpb.ChatServiceClient) string {
+// func signIn(clnt pb.ChatServiceClient) string {
 // 	fmt.Println("singIn mode ...")
 // 	id, pw := "", ""
 
@@ -48,7 +48,7 @@ func hello(clnt chatpb.TestServiceClient) {
 // 	fmt.Scanf("%s %s", &id, &pw)
 
 // 	ctx := context.Background()
-// 	res, err := clnt.SignIn(ctx, &chatpb.RequestSignIn{Id: id, Pw: pw})
+// 	res, err := clnt.SignIn(ctx, &pb.RequestSignIn{Id: id, Pw: pw})
 // 	if err != nil {
 // 		log.Printf("sign in request failed to server ... %v", err)
 // 		return ""
@@ -58,7 +58,7 @@ func hello(clnt chatpb.TestServiceClient) {
 // 	return chat_jwt
 // }
 
-// func chat(clnt chatpb.ChatServiceClient) {
+// func chat(clnt pb.ChatServiceClient) {
 
 // 	stream, err := clnt.Chat(context.Background())
 // 	if err != nil {
@@ -76,8 +76,8 @@ func hello(clnt chatpb.TestServiceClient) {
 // 			}
 
 // 			// for _, message := range messages {
-// 			stream.Send(&chatpb.RequestMessage{
-// 				Auth:    &chatpb.Authorization{Jwt: "temp"},
+// 			stream.Send(&pb.RequestMessage{
+// 				Auth:    &pb.Authorization{Jwt: "temp"},
 // 				Id:      "temp",
 // 				Message: message})
 // 			// }
@@ -119,8 +119,8 @@ func main() {
 	}
 	defer conn.Close()
 
-	// clnt := chatpb.NewChatServiceClient(conn)
-	clnt := chatpb.NewTestServiceClient(conn)
+	// clnt := pb.NewChatServiceClient(conn)
+	clnt := pb.NewTestServiceClient(conn)
 
 	// fmt.Print("select mode 1(SighUp) 2(SignIn) 3(Chat)")
 	// sel := 0
