@@ -55,8 +55,9 @@ func CreateJWT(user string, duration time.Duration) (string, error) {
 	return token.SignedString([]byte(secretKey))
 }
 
-func VerifyJWT(accessToken string) (*MyCustomClaims, error) {
-	splitToken := strings.Split(accessToken, "Bearer ")
+// bearerToken: "Bearer ..." => verify token whether to be valid or not.
+func VerifyJWT(bearerToken string) (*MyCustomClaims, error) {
+	splitToken := strings.Split(bearerToken, "Bearer ")
 	if len(splitToken) != 2 {
 		return nil, fmt.Errorf("Bearer token Incorrect format")
 	}

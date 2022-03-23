@@ -25,6 +25,13 @@ message ResponseSignIn {
     string refresh_token = 2;
 }
 
+// header: token
+message RequestSignOut {
+}
+message ResponseSignOut {
+}
+
+// header: refresh token
 message RequestRefreshToken {
 }
 message ResponseRefreshToken {
@@ -42,6 +49,12 @@ service AuthService {
     rpc SignIn(RequestSignIn) returns (ResponseSignIn) {
         option (google.api.http) = {
             post: "/auth/signin"
+            body: "*"
+        };
+    }
+    rpc SignOut(RequestSignOut) returns (ResponseSignOut) {
+        option (google.api.http) = {
+            post: "/auth/signout"
             body: "*"
         };
     }

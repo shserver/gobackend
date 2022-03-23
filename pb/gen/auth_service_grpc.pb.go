@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthServiceClient interface {
 	SignUp(ctx context.Context, in *RequestSignUp, opts ...grpc.CallOption) (*ResponseSignUp, error)
 	SignIn(ctx context.Context, in *RequestSignIn, opts ...grpc.CallOption) (*ResponseSignIn, error)
+	SignOut(ctx context.Context, in *RequestSignOut, opts ...grpc.CallOption) (*ResponseSignOut, error)
 	RefreshToken(ctx context.Context, in *RequestRefreshToken, opts ...grpc.CallOption) (*ResponseRefreshToken, error)
 }
 
@@ -53,6 +54,15 @@ func (c *authServiceClient) SignIn(ctx context.Context, in *RequestSignIn, opts 
 	return out, nil
 }
 
+func (c *authServiceClient) SignOut(ctx context.Context, in *RequestSignOut, opts ...grpc.CallOption) (*ResponseSignOut, error) {
+	out := new(ResponseSignOut)
+	err := c.cc.Invoke(ctx, "/sehyoung.pb.AuthService/SignOut", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) RefreshToken(ctx context.Context, in *RequestRefreshToken, opts ...grpc.CallOption) (*ResponseRefreshToken, error) {
 	out := new(ResponseRefreshToken)
 	err := c.cc.Invoke(ctx, "/sehyoung.pb.AuthService/RefreshToken", in, out, opts...)
@@ -68,6 +78,7 @@ func (c *authServiceClient) RefreshToken(ctx context.Context, in *RequestRefresh
 type AuthServiceServer interface {
 	SignUp(context.Context, *RequestSignUp) (*ResponseSignUp, error)
 	SignIn(context.Context, *RequestSignIn) (*ResponseSignIn, error)
+	SignOut(context.Context, *RequestSignOut) (*ResponseSignOut, error)
 	RefreshToken(context.Context, *RequestRefreshToken) (*ResponseRefreshToken, error)
 }
 
@@ -80,6 +91,9 @@ func (UnimplementedAuthServiceServer) SignUp(context.Context, *RequestSignUp) (*
 }
 func (UnimplementedAuthServiceServer) SignIn(context.Context, *RequestSignIn) (*ResponseSignIn, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignIn not implemented")
+}
+func (UnimplementedAuthServiceServer) SignOut(context.Context, *RequestSignOut) (*ResponseSignOut, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignOut not implemented")
 }
 func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RequestRefreshToken) (*ResponseRefreshToken, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
@@ -132,6 +146,24 @@ func _AuthService_SignIn_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_SignOut_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestSignOut)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SignOut(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sehyoung.pb.AuthService/SignOut",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SignOut(ctx, req.(*RequestSignOut))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestRefreshToken)
 	if err := dec(in); err != nil {
@@ -164,6 +196,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SignIn",
 			Handler:    _AuthService_SignIn_Handler,
+		},
+		{
+			MethodName: "SignOut",
+			Handler:    _AuthService_SignOut_Handler,
 		},
 		{
 			MethodName: "RefreshToken",

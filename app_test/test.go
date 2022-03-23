@@ -1,12 +1,23 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
+	err := errors.New("test")
+	test1 := status.Errorf(codes.Unauthenticated, "Invalid authorization token, %v", err)
+	test2 := status.Errorf(codes.Unauthenticated, fmt.Sprintf("Invalid authorization token, %v", err))
+
+	log.Println(test1)
+	log.Println(test2)
 
 }
 

@@ -80,19 +80,14 @@ func (s *server) SignUp(ctx context.Context, req *pb.RequestSignUp) (*pb.Respons
 		_, err = s.userDB.Exec("INSERT INTO users VALUES (?, ?, ?, ?)", id, hash_pw, name, email)
 		if err != nil {
 			log.Printf("INSERT into users DB failed : %v", err)
-			return &pb.ResponseSignUp{Success: false},
-				status.Errorf(codes.Internal, fmt.Sprintf("Internal query error"))
+			return &pb.ResponseSignUp{Success: false}, status.Errorf(codes.Internal, "Internal query error")
 		}
 		log.Printf("New Account ID :%s", id)
 		return &pb.ResponseSignUp{Success: true}, nil
 	} else if err == nil {
-		log.Println("Already exist")
-		return &pb.ResponseSignUp{Success: false},
-			status.Errorf(codes.AlreadyExists, fmt.Sprintf("Alreay exists"))
+		return &pb.ResponseSignUp{Success: false}, status.Errorf(codes.AlreadyExists, "Alreay exists")
 	} else {
-		log.Printf("Internal error: %v", err)
-		return &pb.ResponseSignUp{Success: false},
-			status.Errorf(codes.Internal, fmt.Sprintf("Internal query error"))
+		return &pb.ResponseSignUp{Success: false}, status.Errorf(codes.Internal, "Internal query error: %w", err)
 	}
 }
 
@@ -104,32 +99,55 @@ func (s *server) SignIn(ctx context.Context, req *pb.RequestSignIn) (*pb.Respons
 
 	err := s.userDB.QueryRow("SELECT pw FROM users WHERE id=?", id).Scan(&hash_pw)
 	if err == sql.ErrNoRows {
-		log.Printf("query err %v", err)
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Incorrect user or password"))
+		return nil, status.Errorf(codes.NotFound, "Incorrect user or password")
 	} else if err == nil {
 		if !CheckHashPassword(pw, hash_pw) {
-			log.Printf("wrong password")
-			return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Incorrect user or password"))
+			return nil, status.Errorf(codes.NotFound, "Incorrect user or password")
 		}
 		signedJWT, err := middleware.CreateJWT(id, middleware.TokenDuration("access"))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+			return nil, status.Errorf(codes.Internal, "Internal authentication error")
 		}
 		refreshSignedJWT, err := middleware.CreateJWT(id, middleware.TokenDuration("refresh"))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+			return nil, status.Errorf(codes.Internal, "Internal authentication error")
 		}
 
 		_, err = s.redisCon.Do("SET", id, refreshSignedJWT)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+			return nil, status.Errorf(codes.Internal, "Internal authentication error")
 		}
-
 		return &pb.ResponseSignIn{Token: signedJWT, RefreshToken: refreshSignedJWT}, nil
 	} else {
-		log.Printf("Internal error")
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal query error"))
+		return nil, status.Errorf(codes.Internal, "Internal query error")
 	}
+}
+
+func (s *server) SignOut(ctx context.Context, req *pb.RequestSignOut) (*pb.ResponseSignOut, error) {
+	log.Print("SignOut Request from client")
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "No metadata")
+	}
+	values := md["authorization"]
+	if len(values) == 0 {
+		return nil, status.Errorf(codes.Unauthenticated, "No authorization token")
+	}
+
+	claims, err := middleware.VerifyJWT(values[0])
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "Invalid authorization token: %w", err)
+	}
+
+	aud := claims.Audience[0]
+	r, err := redis.Int(s.redisCon.Do("DEL", aud))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Internal authentication error: %w", err)
+	}
+
+	log.Printf("%s's token r(%d) was deleted", aud, r)
+
+	return &pb.ResponseSignOut{}, nil
 }
 
 func (s *server) RefreshToken(ctx context.Context, req *pb.RequestRefreshToken) (*pb.ResponseRefreshToken, error) {
@@ -146,7 +164,7 @@ func (s *server) RefreshToken(ctx context.Context, req *pb.RequestRefreshToken) 
 	claims, err := middleware.VerifyJWT(values[0])
 	if err != nil {
 		log.Printf("Auth Fail : %v", err)
-		return nil, status.Errorf(codes.Unauthenticated, "Invalid authorization token")
+		return nil, status.Errorf(codes.Unauthenticated, "Invalid authorization token, %w", err)
 	}
 
 	aud := claims.Audience[0]
@@ -161,18 +179,18 @@ func (s *server) RefreshToken(ctx context.Context, req *pb.RequestRefreshToken) 
 
 	signedJWT, err := middleware.CreateJWT(aud, middleware.TokenDuration("access"))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+		return nil, status.Errorf(codes.Internal, "Internal authentication error: %w", err)
 	}
 
 	refreshSignedJWT := ""
 	if middleware.RefreshTokenReissue(claims.ExpiresAt.Time) {
 		refreshSignedJWT, err = middleware.CreateJWT(aud, middleware.TokenDuration("refresh"))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+			return nil, status.Errorf(codes.Internal, "Internal authentication error: %w", err)
 		}
 		_, err = s.redisCon.Do("SET", aud, refreshSignedJWT)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Internal authentication error"))
+			return nil, status.Errorf(codes.Internal, "Internal authentication error: %w", err)
 		}
 	}
 
@@ -202,8 +220,7 @@ func main() {
 	// grpc server
 	lis, err := net.Listen("tcp", serverAddress)
 	if err != nil {
-		log.Println("Listen error")
-		panic(err)
+		log.Fatal("can't open auth server: ", err)
 	}
 
 	s := grpc.NewServer()
@@ -214,6 +231,6 @@ func main() {
 	log.Printf("auth service start...")
 	err = s.Serve(lis)
 	if err != nil {
-		log.Printf("grpc server error")
+		log.Fatal("auth server error: ", err)
 	}
 }
