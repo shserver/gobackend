@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -10,8 +9,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type server struct {
@@ -23,21 +20,41 @@ const (
 
 func (s *server) Chat(stream pb.ChatService_ChatServer) error {
 	log.Println("Chat request from client")
-	for {
-		req, err := stream.Recv()
-		if err == io.EOF {
-			log.Printf("client EOF")
-			return nil
+	wait := make(chan struct{})
+	go func() {
+		for {
+			req, err := stream.Recv()
+			if err == io.EOF {
+				log.Printf("client EOF")
+				break
+			}
+			if err != nil {
+				log.Printf("[Chat] err : %v", err)
+				break
+			}
+			log.Print("request from client: ", req.GetMessage())
 		}
-		if err != nil {
-			log.Printf("[Chat] err : %v", err)
-			return status.Errorf(codes.Canceled, fmt.Sprintf("receive error from client %v", err))
-		}
-		message := "Thank you" + req.GetMessage()
+	}()
 
-		err = stream.Send(&pb.ResponseMessage{Message: message})
-		if err != nil {
-			return status.Errorf(codes.Canceled, fmt.Sprintf("send error to client %v", err))
+	go func() {
+		send(stream)
+		close(wait)
+	}()
+	<-wait
+	return nil
+}
+
+func send(stream pb.ChatService_ChatServer) {
+	for {
+		select {
+		case <-stream.Context().Done():
+			return
+		default:
+			err := stream.Send(&pb.ResponseMessage{Message: message})
+			if err != nil {
+				log.Println("send err!!!!!!")
+				return
+			}
 		}
 	}
 }

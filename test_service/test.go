@@ -5,12 +5,9 @@ import (
 	"log"
 	"net"
 	pb "sehyoung/pb/gen"
-	"sehyoung/server/middleware"
+	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 type server struct {
@@ -23,13 +20,18 @@ const (
 func (s *server) Hello(ctx context.Context, req *pb.TestMessage) (*pb.TestMessage, error) {
 	log.Printf("Hello from client: %s", req.GetMsg())
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "No metadata")
+	// md, ok := metadata.FromIncomingContext(ctx)
+	// if !ok {
+	// 	return nil, status.Errorf(codes.Unauthenticated, "No metadata")
+	// }
+
+	// values := md["authorization"]
+	// log.Println("test value : ", values)
+	for i := 0; i < 15; i++ {
+		log.Println(req.GetMsg(), ": ", i)
+		time.Sleep(time.Second)
 	}
 
-	values := md["authorization"]
-	log.Println("test value : ", values)
 	return &pb.TestMessage{Msg: "Welcome !!!"}, nil
 }
 
@@ -41,7 +43,7 @@ func main() {
 		panic(err)
 	}
 	opts := []grpc.ServerOption{
-		grpc.UnaryInterceptor(middleware.UnaryServer()),
+		// grpc.UnaryInterceptor(middleware.UnaryServer()),
 	}
 	s := grpc.NewServer(opts...)
 

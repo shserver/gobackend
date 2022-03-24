@@ -9,6 +9,7 @@ import (
 	"os"
 	pb "sehyoung/pb/gen"
 	"sehyoung/server/middleware"
+	"sehyoung/server/utility"
 	"strings"
 
 	"github.com/go-playground/validator"
@@ -22,8 +23,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// validator is designed to be thread-safe and used as a singleton instance.
 type Account struct {
+	id      int    `shorm:"primary key;auto_increment"`
+	role    string `shorm:"varchar(10);not null"`
+	user_id string `shorm:"varchar(20);unique;not null"`
+	pw      string `shorm:"varchar(64);not null"`
+	name    string `shorm:"varchar(20);not null"`
+	email   string `shorm:"varchar(40);not null"`
+}
+
+// validator is designed to be thread-safe and used as a singleton instance.
+type AccountValidator struct {
 	Id    string `validate:"required,max=15,min=5"`
 	Pw    string `validate:"required,max=15,min=8"`
 	Name  string `validate:"required"`
@@ -35,9 +45,10 @@ type server struct {
 	redisCon redis.Conn //id refreshToken
 }
 
-var (
+const (
 	sqlDriver     = "mysql"
 	serverAddress = "0.0.0.0:50000"
+	tableName     = "account"
 )
 
 func HashPassword(password string) (string, error) {
@@ -57,7 +68,7 @@ func (s *server) SignUp(ctx context.Context, req *pb.RequestSignUp) (*pb.Respons
 	email := req.GetEmail()
 
 	validate := validator.New()
-	err := validate.Struct(&Account{
+	err := validate.Struct(&AccountValidator{
 		Id:    id,
 		Pw:    pw,
 		Name:  name,
@@ -69,7 +80,17 @@ func (s *server) SignUp(ctx context.Context, req *pb.RequestSignUp) (*pb.Respons
 			status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid Type"))
 	}
 
-	err = s.userDB.QueryRow("SELECT id FROM users WHERE id=?", id).Scan(&id)
+	count := 0
+	err = s.userDB.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)).Scan(&count)
+	if err != nil {
+		return &pb.ResponseSignUp{Success: false}, status.Errorf(codes.Internal, "Internal query error: %w", err)
+	}
+	role := "user"
+	if count == 0 {
+		role = "admin"
+	}
+
+	err = s.userDB.QueryRow(fmt.Sprintf("SELECT id FROM %s WHERE user_id=?", tableName), id).Scan(&id)
 	if err == sql.ErrNoRows {
 		hash_pw, err := HashPassword(pw)
 		if err != nil {
@@ -77,9 +98,9 @@ func (s *server) SignUp(ctx context.Context, req *pb.RequestSignUp) (*pb.Respons
 			return &pb.ResponseSignUp{Success: false},
 				status.Errorf(codes.Internal, fmt.Sprintf("Internal query error"))
 		}
-		_, err = s.userDB.Exec("INSERT INTO users VALUES (?, ?, ?, ?)", id, hash_pw, name, email)
+		_, err = s.userDB.Exec(fmt.Sprintf("INSERT INTO %s (role, user_id, pw, name, email) VALUES (?, ?, ?, ?, ?)", tableName), role, id, hash_pw, name, email)
 		if err != nil {
-			log.Printf("INSERT into users DB failed : %v", err)
+			log.Printf("INSERT into %s DB failed : %v", tableName, err)
 			return &pb.ResponseSignUp{Success: false}, status.Errorf(codes.Internal, "Internal query error")
 		}
 		log.Printf("New Account ID :%s", id)
@@ -206,9 +227,15 @@ func main() {
 	// user DB server
 	db, err := sql.Open(sqlDriver, os.Getenv("USER_DB_SERVER"))
 	if err != nil {
-		log.Fatal("can't connect to user server: ", err)
+		log.Fatal("can't connect to gobackend server: ", err)
 	}
 	defer db.Close()
+
+	err = utility.CreateTable(db, &Account{})
+	// _, err = db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(id int primary key auto_increment, role VARCHAR(10) not null, user_id VARCHAR(32) unique not null, pw VARCHAR(64) not null, name VARCHAR(20) not null, email VARCHAR(40) not null)", tableName))
+	if err != nil {
+		log.Fatalf("can't create %s table: %v", tableName, err)
+	}
 
 	// token DB server
 	c, err := redis.Dial("tcp", ":6379")
