@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package sehyoung.pb;
+option go_package = ".;pb";
+
+// import "google/api/annotations.proto";
+
+// counsel chat
+message RequestCounsel {
+    string message = 1;
+}
+message ResponseCounsel {
+    string message = 1;
+}
+
+service PublicService {
+    // websocket: "/public/counsel"
+    rpc Counsel(stream RequestCounsel) returns (stream ResponseCounsel) {}
+}

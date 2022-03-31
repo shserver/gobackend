@@ -1,11 +1,15 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -39,6 +43,22 @@ func RefreshTokenReissue(expirationDate time.Time) bool {
 		return true
 	}
 	return false
+}
+
+func AudInfoFromContext(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", status.Errorf(codes.Unauthenticated, "No metadata")
+	}
+	values := md["authorization"]
+	if len(values) == 0 {
+		return "", status.Errorf(codes.Unauthenticated, "No authorization token")
+	}
+	claims, err := VerifyJWT(values[0])
+	if err != nil {
+		return "", status.Errorf(codes.Unauthenticated, "Invalid authorization token, %w", err)
+	}
+	return claims.Audience[0], nil
 }
 
 // user: user id, duration: use TokenDuration

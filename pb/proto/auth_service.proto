@@ -5,22 +5,37 @@ option go_package = ".;pb";
 
 import "google/api/annotations.proto";
 
+// not empty
+// email(ID): unique,
+// password: 8~20, repeating same characters < 3, alphabet|number|special combination >= 2
+// name: Alphabet or Hangeul
+// phone_number: Just phone nubmer format, It's ok with or without hyphens.
+// @ password double check in frontend
 message RequestSignUp {
-    string id = 1;
-    string pw = 2;
+    string email = 1;
+    string password = 2;
     string name = 3;
-    string email = 4;
+    string phone_number = 4;
 }
+// If the result is SUCCESS, email authentication wil be requested.
+// authentication: phone or email, frontend or backend
 message ResponseSignUp {
-    bool success = 1;
+    enum Validation {
+        FAIL = 0;
+        SUCCESS = 1;
+        INVALID_FORMAT = 3;
+        DUPLICATE_EMAIL = 4;
+
+    }
+    Validation validation = 1;
 }
 
 message RequestSignIn {
-    string id = 1;
-    string pw = 2;
+    string email = 1;
+    string password = 2;
 }
+// Invalid ID or PW if jwt is empty
 message ResponseSignIn {
-    // Invalid ID or PW if jwt is empty
     string token = 1;
     string refresh_token = 2;
 }
@@ -38,6 +53,32 @@ message ResponseRefreshToken {
     string token = 1;
     string refresh_token = 2;
 }
+
+// header: token
+message RequestDeleteAccount {
+    string password = 1;
+}
+message ResponseDeleteAccount {
+}
+
+// ID(email)
+message RequestFindID {
+    string name = 1;
+    string phone_number = 2;
+}
+// The authentication no will be sent to the phone number if name, no is valid.
+// email list? User may have multiple accounts
+message ResponseFindID {
+    string email = 1;
+}
+
+message RequestFindPW {
+    string email = 1;
+}
+// The authentication no will be sent to the email.
+message ResponseFindPW {
+}
+
 
 service AuthService {
     rpc SignUp(RequestSignUp) returns (ResponseSignUp) {
@@ -64,4 +105,22 @@ service AuthService {
             body: "*"
         };
     }
+    rpc DeleteAccount(RequestDeleteAccount) returns (ResponseDeleteAccount) {
+        option (google.api.http) = {
+            post: "/auth/deleteaccount"
+            body: "*"
+        };  
+    }
+    rpc FindID(RequestFindID) returns (ResponseFindID) {
+        option (google.api.http) = {
+            post: "/auth/findid"
+            body: "*"
+        };
+    }
+    rpc FindPW(RequestFindPW) returns (ResponseFindPW) {
+        option (google.api.http) = {
+            post: "/auth/findpw"
+            body: "*"
+        };    
+    }  
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/shserver/gopackage/shlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -24,7 +25,7 @@ func UnaryClient() grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		log.Printf("unary interceptor method : %s", method)
+		shlog.Logf("INFO", "unary interceptor method : %s", method)
 		ctx, cancel := context.WithTimeout(ctx, ctxTimeout)
 		defer cancel()
 		return invoker(ctx, method, req, reply, cc, opts...)

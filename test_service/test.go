@@ -36,7 +36,7 @@ func (s *server) Hello(ctx context.Context, req *pb.TestMessage) (*pb.TestMessag
 }
 
 func main() {
-	// Server
+	// Serverㅜ
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Println("Listen error")

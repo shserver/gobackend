@@ -5,8 +5,9 @@ import (
 	"log"
 	"os/exec"
 	"reflect"
-	"sehyoung/server/utility"
 	"time"
+
+	"github.com/shserver/gopackage/shlog"
 )
 
 // import (
@@ -35,9 +36,13 @@ type Account struct {
 	email   string `shorm:"varchar(40);not null"`
 }
 
+func TestFunc() {
+}
+
 func main() {
-	err := utility.CreateTable(Account{})
-	log.Println("res: ", err)
+	shlog.InitLogger("")
+	// utility.Log("DEBUG", "TEST 111222!!")
+	shlog.Logf("INFO", "SignUp Request from client")
 }
 
 func GetFieldName(fieldPinter interface{}) {

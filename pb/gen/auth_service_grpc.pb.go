@@ -26,6 +26,9 @@ type AuthServiceClient interface {
 	SignIn(ctx context.Context, in *RequestSignIn, opts ...grpc.CallOption) (*ResponseSignIn, error)
 	SignOut(ctx context.Context, in *RequestSignOut, opts ...grpc.CallOption) (*ResponseSignOut, error)
 	RefreshToken(ctx context.Context, in *RequestRefreshToken, opts ...grpc.CallOption) (*ResponseRefreshToken, error)
+	DeleteAccount(ctx context.Context, in *RequestDeleteAccount, opts ...grpc.CallOption) (*ResponseDeleteAccount, error)
+	FindID(ctx context.Context, in *RequestFindID, opts ...grpc.CallOption) (*ResponseFindID, error)
+	FindPW(ctx context.Context, in *RequestFindPW, opts ...grpc.CallOption) (*ResponseFindPW, error)
 }
 
 type authServiceClient struct {
@@ -72,6 +75,33 @@ func (c *authServiceClient) RefreshToken(ctx context.Context, in *RequestRefresh
 	return out, nil
 }
 
+func (c *authServiceClient) DeleteAccount(ctx context.Context, in *RequestDeleteAccount, opts ...grpc.CallOption) (*ResponseDeleteAccount, error) {
+	out := new(ResponseDeleteAccount)
+	err := c.cc.Invoke(ctx, "/sehyoung.pb.AuthService/DeleteAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) FindID(ctx context.Context, in *RequestFindID, opts ...grpc.CallOption) (*ResponseFindID, error) {
+	out := new(ResponseFindID)
+	err := c.cc.Invoke(ctx, "/sehyoung.pb.AuthService/FindID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) FindPW(ctx context.Context, in *RequestFindPW, opts ...grpc.CallOption) (*ResponseFindPW, error) {
+	out := new(ResponseFindPW)
+	err := c.cc.Invoke(ctx, "/sehyoung.pb.AuthService/FindPW", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations should embed UnimplementedAuthServiceServer
 // for forward compatibility
@@ -80,6 +110,9 @@ type AuthServiceServer interface {
 	SignIn(context.Context, *RequestSignIn) (*ResponseSignIn, error)
 	SignOut(context.Context, *RequestSignOut) (*ResponseSignOut, error)
 	RefreshToken(context.Context, *RequestRefreshToken) (*ResponseRefreshToken, error)
+	DeleteAccount(context.Context, *RequestDeleteAccount) (*ResponseDeleteAccount, error)
+	FindID(context.Context, *RequestFindID) (*ResponseFindID, error)
+	FindPW(context.Context, *RequestFindPW) (*ResponseFindPW, error)
 }
 
 // UnimplementedAuthServiceServer should be embedded to have forward compatible implementations.
@@ -97,6 +130,15 @@ func (UnimplementedAuthServiceServer) SignOut(context.Context, *RequestSignOut) 
 }
 func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RequestRefreshToken) (*ResponseRefreshToken, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
+}
+func (UnimplementedAuthServiceServer) DeleteAccount(context.Context, *RequestDeleteAccount) (*ResponseDeleteAccount, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedAuthServiceServer) FindID(context.Context, *RequestFindID) (*ResponseFindID, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindID not implemented")
+}
+func (UnimplementedAuthServiceServer) FindPW(context.Context, *RequestFindPW) (*ResponseFindPW, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindPW not implemented")
 }
 
 // UnsafeAuthServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -182,6 +224,60 @@ func _AuthService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestDeleteAccount)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sehyoung.pb.AuthService/DeleteAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).DeleteAccount(ctx, req.(*RequestDeleteAccount))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_FindID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestFindID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).FindID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sehyoung.pb.AuthService/FindID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).FindID(ctx, req.(*RequestFindID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_FindPW_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestFindPW)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).FindPW(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sehyoung.pb.AuthService/FindPW",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).FindPW(ctx, req.(*RequestFindPW))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -204,6 +300,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefreshToken",
 			Handler:    _AuthService_RefreshToken_Handler,
+		},
+		{
+			MethodName: "DeleteAccount",
+			Handler:    _AuthService_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "FindID",
+			Handler:    _AuthService_FindID_Handler,
+		},
+		{
+			MethodName: "FindPW",
+			Handler:    _AuthService_FindPW_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
