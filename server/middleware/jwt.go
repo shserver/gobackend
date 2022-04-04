@@ -89,9 +89,13 @@ func VerifyJWT(bearerToken string) (*MyCustomClaims, error) {
 		return []byte(secretKey), nil
 	})
 
-	if claims, ok := token.Claims.(*MyCustomClaims); ok && token.Valid {
-		return claims, nil
-	} else if err == jwt.ErrTokenMalformed {
+	if err == nil {
+		if claims, ok := token.Claims.(*MyCustomClaims); ok && token.Valid {
+			return claims, nil
+		}
+	}
+
+	if err == jwt.ErrTokenMalformed {
 		return nil, fmt.Errorf("That's not even a token: %w", err)
 	} else if err == jwt.ErrTokenExpired {
 		return nil, fmt.Errorf("Token is expired: %w", err)
