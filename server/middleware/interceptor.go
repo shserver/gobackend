@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/shserver/gopackage/shlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -66,14 +68,14 @@ func UnaryClientLog() grpc.UnaryClientInterceptor {
 		opts ...grpc.CallOption,
 	) error {
 		startTime := time.Now()
-		packagetest.InitLogger("")
+		shlog.InitLogger("")
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		fiedls := &logInfo{
 			request:     method[strings.LastIndex(method, ".")+1:],
 			elapsedTime: time.Since(startTime).String(),
 			response:    status.Code(err),
 		}
-		packagetest.LogFields("INFO", "Interceptor", fiedls)
+		shlog.LogFields("INFO", "Interceptor", fiedls)
 		return err
 	}
 }
