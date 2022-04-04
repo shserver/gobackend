@@ -8,7 +8,7 @@ import "google/api/annotations.proto";
 // not empty
 // email(ID): unique,
 // password: 8~20, repeating same characters < 3, alphabet|number|special combination >= 2
-// name: Alphabet or Hangeul
+// name: Alphabet or Hangeul, max: 20
 // phone_number: Just phone nubmer format, It's ok with or without hyphens.
 // @ password double check in frontend
 message RequestSignUp {

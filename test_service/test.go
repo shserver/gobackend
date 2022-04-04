@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
 	"net"
 	pb "sehyoung/pb/gen"
-	"time"
+	"sehyoung/server/middleware"
 
+	"github.com/shserver/gopackage/shlog"
 	"google.golang.org/grpc"
 )
 
@@ -18,39 +18,27 @@ const (
 )
 
 func (s *server) Hello(ctx context.Context, req *pb.TestMessage) (*pb.TestMessage, error) {
-	log.Printf("Hello from client: %s", req.GetMsg())
-
-	// md, ok := metadata.FromIncomingContext(ctx)
-	// if !ok {
-	// 	return nil, status.Errorf(codes.Unauthenticated, "No metadata")
-	// }
-
-	// values := md["authorization"]
-	// log.Println("test value : ", values)
-	for i := 0; i < 15; i++ {
-		log.Println(req.GetMsg(), ": ", i)
-		time.Sleep(time.Second)
-	}
+	shlog.Logf("INFO", "Hello from client: %s", req.GetMsg())
 
 	return &pb.TestMessage{Msg: "Welcome !!!"}, nil
 }
 
 func main() {
-	// Serverㅜ
+	shlog.InitLogger("")
+	// Server
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Println("Listen error")
-		panic(err)
+		shlog.Logf("FATAL", "Listen error: %v", err)
 	}
 	opts := []grpc.ServerOption{
-		// grpc.UnaryInterceptor(middleware.UnaryServer()),
+		middleware.UnaryServer(),
 	}
 	s := grpc.NewServer(opts...)
 
 	pb.RegisterTestServiceServer(s, &server{})
-	log.Printf("test service start...")
+	shlog.Logf("INFO", "test service start...")
 	err = s.Serve(lis)
 	if err != nil {
-		log.Printf("grpc server error")
+		shlog.Logf("FATAL", "grpc server error: %v", err)
 	}
 }
